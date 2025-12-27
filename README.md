@@ -55,6 +55,7 @@ Expected output:
 
 ## Notes
 - This project intentionally stores only hashes on-chain (not the raw files) to keep on-chain data minimal and immutable.
+- Same hash cannot be recorded twice; the contract enforces idempotency.
 - Next steps (planned):
   - Gin API: POST /v1/proofs (file upload -> SHA-256 -> recordHash)
   - Idempotency: return 409 if already recorded

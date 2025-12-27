@@ -79,6 +79,10 @@ func main() {
 
 	// ---- input -> hash ----
 	input := "hello world (from go)"
+	if len(os.Args) > 1 {
+		input = strings.Join(os.Args[1:], " ")
+	}
+
 	hash := sha256Bytes32(input)
 
 	fmt.Println("input   :", input)
@@ -87,9 +91,25 @@ func main() {
 	// ---- send tx ----
 	tx, err := contract.RecordHash(auth, hash)
 	if err != nil {
-		log.Fatalf("recordHash tx failed: %v", err)
+		// "Already recorded"는 정상적인 도메인 상태이므로 종료하지 않고 안내만 출력
+		if strings.Contains(err.Error(), "Already recorded") ||
+			strings.Contains(err.Error(), "execution reverted") {
+			fmt.Println("already recorded on-chain; skipping tx")
+		} else {
+			log.Fatalf("recordHash tx failed: %v", err)
+		}
+	} else {
+		fmt.Println("tx hash :", tx.Hash().Hex())
+
+		receipt, err := bind.WaitMined(ctx, client, tx)
+		if err != nil {
+			log.Fatalf("tx mining failed: %v", err)
+		}
+		fmt.Printf("mined   : block=%d status=%d\n",
+			receipt.BlockNumber.Uint64(),
+			receipt.Status,
+		)
 	}
-	fmt.Println("tx hash :", tx.Hash().Hex())
 
 	receipt, err := bind.WaitMined(ctx, client, tx)
 	if err != nil {
