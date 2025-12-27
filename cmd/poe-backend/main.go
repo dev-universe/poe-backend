@@ -111,15 +111,6 @@ func main() {
 		)
 	}
 
-	receipt, err := bind.WaitMined(ctx, client, tx)
-	if err != nil {
-		log.Fatalf("tx mining failed: %v", err)
-	}
-	fmt.Printf("mined   : block=%d status=%d\n",
-		receipt.BlockNumber.Uint64(),
-		receipt.Status,
-	)
-
 	// ---- read ----
 	rec, err := contract.GetRecord(&bind.CallOpts{Context: ctx}, hash)
 	if err != nil {
