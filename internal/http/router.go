@@ -9,6 +9,7 @@ func NewRouter(h *ProofsHandler) *gin.Engine {
 	v1 := r.Group("/v1")
 	{
 		v1.POST("/proofs", h.CreateProof)
+		v1.GET("proofs/:hash", h.GetProof)
 	}
 
 	return r

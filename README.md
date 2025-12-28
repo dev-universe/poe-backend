@@ -1,38 +1,58 @@
-# PoE Backend (Golang) - Proof of Existence
+# PoE Backend (Golang) – Proof of Existence
 
-A minimal blockchain-backend portfolio project:
-- Create a SHA-256 hash from data (later: uploaded files)
-- Record the hash on-chain via a Solidity contract
-- Read the on-chain record (recorder address + timestamp)
+A minimal **blockchain backend portfolio project** that demonstrates how a Golang service interacts with an Ethereum smart contract.
 
-This repo focuses on the **Golang backend** side:
-transaction signing/sending, waiting for mining, and reading contract state.
+## What this project does
+
+* Generate a **SHA-256 hash** from uploaded data
+* Record the hash **on-chain** via a Solidity smart contract
+* Retrieve on-chain record information (recorder address + timestamp)
+* Enforce **idempotency**: the same hash cannot be recorded twice
+
+This repository focuses on the **Golang backend side**:
+transaction signing, sending, waiting for mining, and reading smart contract state.
+
+---
 
 ## Architecture
 
-- On-chain (Solidity):
-  - Stores only `bytes32` hash + metadata (recorder, timestamp)
-  - Emits an event when a hash is recorded
+### On-chain (Solidity)
 
-- Off-chain (Golang):
-  - Generates hash
-  - Sends `recordHash(bytes32)` transaction
-  - Reads `getRecord(bytes32)` from the contract
+* Stores only a `bytes32` hash and minimal metadata:
+
+  * recorder address
+  * timestamp
+* Emits an event when a hash is recorded
+* Prevents duplicate records at the contract level
+
+### Off-chain (Golang)
+
+* Accepts file uploads via HTTP (Gin)
+* Computes SHA-256 hash
+* Sends `recordHash(bytes32)` transactions
+* Maps contract reverts to HTTP semantics (e.g. `409 Conflict`)
+* Reads on-chain data via `getRecord(bytes32)`
+
+---
 
 ## Prerequisites
 
-- WSL2 (Ubuntu)
-- Go
-- Anvil + Foundry (contract side)
-- A deployed PoE contract on Anvil (local)
+* WSL2 (Ubuntu)
+* Go
+* Anvil + Foundry (for local blockchain)
+* A deployed PoE contract on Anvil
+
+---
 
 ## Environment Variables
 
 Set these in your WSL shell:
 
-- `RPC_URL` (e.g. `http://127.0.0.1:8545`)
-- `POE_ADDRESS` (deployed contract address)
-- `DEPLOYER_PRIVATE_KEY` (anvil account private key)
+* `RPC_URL` – Ethereum RPC endpoint
+  (e.g. `http://127.0.0.1:8545`)
+* `POE_ADDRESS` – deployed PoE contract address
+* `DEPLOYER_PRIVATE_KEY` – private key of the Anvil account
+* `LISTEN_ADDR` (optional) – API listen address (default `:8080`)
 
 Example:
 
@@ -40,23 +60,109 @@ Example:
 export RPC_URL=http://127.0.0.1:8545
 export POE_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3
 export DEPLOYER_PRIVATE_KEY=0x...
+export LISTEN_ADDR=:8080
 ```
 
-## Run (CLI)
+---
+
+## Run
+
+Start the API server:
+
 ```bash
 go run ./cmd/poe-backend
 ```
-Expected output:
-- input string
-- SHA-256 hash
-- tx hash
-- mined block + status
-- recorder + timestamp
+
+Expected behavior:
+
+* The server listens on `:8080`
+* Incoming requests trigger on-chain transactions or reads
+
+---
+
+## API Usage
+
+### POST /v1/proofs
+
+Upload a file and record its SHA-256 hash on-chain.
+
+#### Request
+
+```bash
+echo "hello api" > /tmp/hello.txt
+curl -i -F "file=@/tmp/hello.txt" http://localhost:8080/v1/proofs
+```
+
+#### Success Response (first upload)
+
+```http
+HTTP/1.1 201 Created
+Content-Type: application/json
+
+{
+  "hash": "7c6a724bf3ff56d9bb7245aa6269f0becca0d92e96e617827ae29fa7bb662a38",
+  "tx_hash": "0x0ae2930fbd32775a1b7fce827908be06a4d5826d1104294f16f7d74bead14671",
+  "already_recorded": false
+}
+```
+
+#### Duplicate Upload (idempotent)
+
+```bash
+curl -i -F "file=@/tmp/hello.txt" http://localhost:8080/v1/proofs
+```
+
+```http
+HTTP/1.1 409 Conflict
+Content-Type: application/json
+
+{
+  "hash": "7c6a724bf3ff56d9bb7245aa6269f0becca0d92e96e617827ae29fa7bb662a38",
+  "tx_hash": "",
+  "already_recorded": true
+}
+```
+
+---
+
+### GET /v1/proofs/:hash
+
+Retrieve on-chain record information for a given hash.
+
+```bash
+curl -i http://localhost:8080/v1/proofs/7c6a724bf3ff56d9bb7245aa6269f0becca0d92e96e617827ae29fa7bb662a38
+```
+
+#### Success Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "hash": "7c6a724bf3ff56d9bb7245aa6269f0becca0d92e96e617827ae29fa7bb662a38",
+  "recorder": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "timestamp": 1766828014
+}
+```
+
+---
 
 ## Notes
-- This project intentionally stores only hashes on-chain (not the raw files) to keep on-chain data minimal and immutable.
-- Same hash cannot be recorded twice; the contract enforces idempotency.
-- Next steps (planned):
-  - Gin API: POST /v1/proofs (file upload -> SHA-256 -> recordHash)
-  - Idempotency: return 409 if already recorded
-  - Event indexing + Postgres for fast queries
+
+* Only **hashes** are stored on-chain; raw files are never written to the blockchain.
+* Idempotency is enforced at the **smart contract level**, not just in the backend.
+* HTTP semantics reflect blockchain state:
+
+  * `201 Created` → new on-chain record
+  * `409 Conflict` → hash already recorded
+* This project is designed to be fully reproducible on a local Anvil chain.
+
+---
+
+## Future Improvements
+
+* Asynchronous transaction handling (respond before mining)
+* Event indexing + PostgreSQL for fast queries
+* Authentication and rate limiting
+* Support for public testnets (Sepolia)
