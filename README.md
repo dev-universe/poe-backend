@@ -58,7 +58,7 @@ Example:
 
 ```bash
 export RPC_URL=http://127.0.0.1:8545
-export POE_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3
+export POE_ADDRESS=0x5F~~~~
 export DEPLOYER_PRIVATE_KEY=0x...
 export LISTEN_ADDR=:8080
 ```
@@ -100,8 +100,8 @@ HTTP/1.1 201 Created
 Content-Type: application/json
 
 {
-  "hash": "7c6a724bf3ff56d9bb7245aa6269f0becca0d92e96e617827ae29fa7bb662a38",
-  "tx_hash": "0x0ae2930fbd32775a1b7fce827908be06a4d5826d1104294f16f7d74bead14671",
+  "hash": "7c6a~~~~",
+  "tx_hash": "0x0a~~~~",
   "already_recorded": false
 }
 ```
@@ -117,7 +117,7 @@ HTTP/1.1 409 Conflict
 Content-Type: application/json
 
 {
-  "hash": "7c6a724bf3ff56d9bb7245aa6269f0becca0d92e96e617827ae29fa7bb662a38",
+  "hash": "7c6a~~~~",
   "tx_hash": "",
   "already_recorded": true
 }
@@ -130,7 +130,7 @@ Content-Type: application/json
 Retrieve on-chain record information for a given hash.
 
 ```bash
-curl -i http://localhost:8080/v1/proofs/7c6a724bf3ff56d9bb7245aa6269f0becca0d92e96e617827ae29fa7bb662a38
+curl -i http://localhost:8080/v1/proofs/7c6a~~~~
 ```
 
 #### Success Response
@@ -140,8 +140,8 @@ HTTP/1.1 200 OK
 Content-Type: application/json
 
 {
-  "hash": "7c6a724bf3ff56d9bb7245aa6269f0becca0d92e96e617827ae29fa7bb662a38",
-  "recorder": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "hash": "7c6a~~~",
+  "recorder": "0xf3~~",
   "timestamp": 1766828014
 }
 ```
